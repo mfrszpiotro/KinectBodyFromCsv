@@ -7,6 +7,7 @@
 namespace Microsoft.Samples.Kinect.BodyBasics
 {
     using System;
+    using System.Collections;
     using System.Collections.Generic;
     using System.ComponentModel;
     using System.Diagnostics;
@@ -16,6 +17,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
     using System.Windows.Media;
     using System.Windows.Media.Imaging;
     using Microsoft.Kinect;
+    using System.Threading;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -126,6 +128,10 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// Current status text to display
         /// </summary>
         private string statusText = null;
+
+        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBody.ReadFromFile("ollie.csv");
+
+        private int csvCounter = 0;
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -266,10 +272,9 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// <param name="e">event arguments</param>
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Testing");
             if (this.bodyFrameReader != null)
             {
-                this.bodyFrameReader.FrameArrived += this.Reader_FrameArrived;
+                this.bodyFrameReader.FrameArrived += this.Dummy_Reader_FrameArrived;
             }
         }
 
@@ -280,17 +285,113 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// <param name="e">event arguments</param>
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
-            if (this.bodyFrameReader != null)
-            {
-                // BodyFrameReader is IDisposable
-                this.bodyFrameReader.Dispose();
-                this.bodyFrameReader = null;
-            }
+
+            //if (this.bodyFrameReader != null)
+            //{
+            //    // BodyFrameReader is IDisposable
+            //    this.bodyFrameReader.Dispose();
+            //    this.bodyFrameReader = null;
+            //}
 
             if (this.kinectSensor != null)
             {
                 this.kinectSensor.Close();
                 this.kinectSensor = null;
+            }
+        }
+
+        private void Dummy_Reader(object sender, BodyFrameArrivedEventArgs e)
+        {
+            foreach (KeyValuePair<float, IReadOnlyDictionary<JointType, Joint>> pair in csvJointsInTime)
+            {
+                using (DrawingContext dc = this.drawingGroup.Open())
+                {
+                    // Draw a transparent background to set the render size
+                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
+                    Pen drawPen = this.bodyColors[0];
+                    IReadOnlyDictionary<JointType, Joint> joints = pair.Value;
+
+                    // convert the joint points to depth (display) space
+                    Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
+
+                    foreach (JointType jointType in joints.Keys)
+                    {
+                        // sometimes the depth(Z) of an inferred joint may show as negative
+                        // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
+                        CameraSpacePoint position = joints[jointType].Position;
+                        if (position.Z < 0)
+                        {
+                            position.Z = InferredZPositionClamp;
+                        }
+
+                        DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
+                        jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                    }
+
+                    this.DrawBody(joints, jointPoints, dc, drawPen);
+                }
+                Thread.Sleep(10);
+            }
+        }
+
+        /// <summary>
+        /// Handles the body frame data arriving from the sensor
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void Dummy_Reader_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
+        {
+            bool dataReceived = false;
+
+            using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
+            {
+                if (bodyFrame != null)
+                {
+                    if (this.bodies == null)
+                    {
+                        this.bodies = new Body[bodyFrame.BodyCount];
+                    }
+
+                    // The first time GetAndRefreshBodyData is called, Kinect will allocate each Body in the array.
+                    // As long as those body objects are not disposed and not set to null in the array,
+                    // those body objects will be re-used.
+                    bodyFrame.GetAndRefreshBodyData(this.bodies);
+                    dataReceived = true;
+                }
+            }
+
+            if (dataReceived)
+            {
+                using (DrawingContext dc = this.drawingGroup.Open())
+                {
+                    // Draw a transparent background to set the render size
+                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
+                    Pen drawPen = this.bodyColors[0];
+
+                    IReadOnlyDictionary<JointType, Joint> joints = csvJointsInTime[0];
+
+                    // convert the joint points to depth (display) space
+                    Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
+
+                    foreach (JointType jointType in joints.Keys)
+                    {
+                        // sometimes the depth(Z) of an inferred joint may show as negative
+                        // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
+                        CameraSpacePoint position = joints[jointType].Position;
+                        if (position.Z < 0)
+                        {
+                            position.Z = InferredZPositionClamp;
+                        }
+
+                        DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
+                        jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
+                    }
+
+                    this.DrawBody(joints, jointPoints, dc, drawPen);
+
+                    // prevent drawing outside of our render area
+                    this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
+                }
             }
         }
 
