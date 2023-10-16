@@ -41,16 +41,38 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         public float HandTipRight_x { get; set; }   public float HandTipRight_y { get; set; }   public float HandTipRight_z { get; set; }
         public float ThumbRight_x { get; set; }     public float ThumbRight_y { get; set; }    public float ThumbRight_z { get; set; }
 
-        public bool ReadFromFile(string fileName)
+        public List<CsvBody> ReadFromFile(string fileName)
         {
-            // todo
-            return false;
+            using (var reader = new StreamReader("saved\\"+fileName))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                var records = csv.GetRecords<CsvBody>();
+            }
+            return records;
         }
 
-        public bool SaveToFile(string fileName)
+        public void InitFile(string fileName)
         {
-            //todo
-            return false;
+            using (var writer = new StreamWriter("saved\\"+fileName))
+            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            {
+                List<CsvBody> emptyList = new List<CsvBody>()
+                csv.WriteRecords(emptyList);
+            }
+        }
+
+        public void AppendToFile(string fileName, List<CsvBody> records)
+        {
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = false,
+            };
+            using (var stream = File.Open("saved\\"+fileName, FileMode.Append))
+            using (var writer = new StreamWriter(stream))
+            using (var csv = new CsvWriter(writer, config))
+            {
+                csv.WriteRecords(records);
+            }
         }
     }
 }
