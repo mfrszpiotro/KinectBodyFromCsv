@@ -8,68 +8,49 @@ using System.IO;
 using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Globalization;
+using CsvHelper;
 
 namespace Microsoft.Samples.Kinect.BodyBasics
 {
     internal class CsvBody
     {
-        private static Joint InitJointFromCsvPoint(JointType type, float x, float y, float z)
+        public float Time { get; set; }
+        public float SpineBase_x { get; set; }      public float SpineBase_y { get; set; }      public float SpineBase_z { get; set; }
+        public float SpineMid_x { get; set; }       public float SpineMid_y { get; set; }       public float SpineMid_z { get; set; }
+        public float Neck_x { get; set; }           public float Neck_y { get; set; }           public float Neck_z { get; set; }
+        public float Head_x { get; set; }           public float Head_y { get; set; }           public float Head_z { get; set; }
+        public float ShoulderLeft_x { get; set; }   public float ShoulderLeft_y { get; set; }   public float ShoulderLeft_z { get; set; }
+        public float ElbowLeft_x { get; set; }      public float ElbowLeft_y { get; set; }      public float ElbowLeft_z { get; set; }
+        public float WristLeft_x { get; set; }      public float WristLeft_y { get; set; }      public float WristLeft_z { get; set; }
+        public float HandLeft_x { get; set; }       public float HandLeft_y { get; set; }       public float HandLeft_z { get; set; }
+        public float ShoulderRight_x { get; set; }  public float ShoulderRight_y { get; set; }  public float ShoulderRight_z { get; set; }
+        public float ElbowRight_x { get; set; }     public float ElbowRight_y { get; set; }     public float ElbowRight_z { get; set; }
+        public float WristRight_x { get; set; }     public float WristRight_y { get; set; }     public float WristRight_z { get; set; }
+        public float HandRight_x { get; set; }      public float HandRight_y { get; set; }      public float HandRight_z { get; set; }
+        public float HipLeft_x { get; set; }        public float HipLeft_y { get; set; }        public float HipLeft_z { get; set; }
+        public float KneeLeft_x { get; set; }       public float KneeLeft_y { get; set; }       public float KneeLeft_z { get; set; }
+        public float AnkleLeft_x { get; set; }      public float AnkleLeft_y { get; set; }      public float AnkleLeft_z { get; set; }
+        public float FootLeft_x { get; set; }       public float FootLeft_y { get; set; }       public float FootLeft_z { get; set; }
+        public float HipRight_x { get; set; }       public float HipRight_y { get; set; }       public float HipRight_z { get; set; }
+        public float KneeRight_x { get; set; }      public float KneeRight_y { get; set; }      public float KneeRight_z { get; set; }
+        public float AnkleRight_x { get; set; }     public float AnkleRight_y { get; set; }     public float AnkleRight_z { get; set; }
+        public float FootRight_x { get; set; }      public float FootRight_y { get; set; }      public float FootRight_z { get; set; }
+        public float SpineShoulder_x { get; set; }  public float SpineShoulder_y { get; set; }  public float SpineShoulder_z { get; set; }
+        public float HandTipLeft_x { get; set; }    public float HandTipLeft_y { get; set; }    public float HandTipLeft_z { get; set; }
+        public float ThumbLeft_x { get; set; }      public float ThumbLeft_y { get; set; }      public float ThumbLeft_z { get; set; }
+        public float HandTipRight_x { get; set; }   public float HandTipRight_y { get; set; }   public float HandTipRight_z { get; set; }
+        public float ThumbRight_x { get; set; }     public float ThumbRight_y { get; set; }    public float ThumbRight_z { get; set; }
+
+        public bool ReadFromFile(string fileName)
         {
-            Joint j = new Joint();
-            j.TrackingState = TrackingState.Tracked;
-            j.JointType = type;
-            j.Position = new CameraSpacePoint();
-            j.Position.X = x;
-            j.Position.Y = y;
-            j.Position.Z = z;
-            return j;
+            // todo
+            return false;
         }
 
-        public static Dictionary<float, IReadOnlyDictionary<JointType, Joint>> ReadFromFile(string fileName)
+        public bool SaveToFile(string fileName)
         {
-            Dictionary<float, IReadOnlyDictionary<JointType, Joint>> jointsInTime = new Dictionary<float, IReadOnlyDictionary<JointType, Joint>>();
-            using(var reader = new StreamReader(fileName))
-            {
-                string headline = reader.ReadLine();
-                string[] headers = headline.Split(',');
-                while (!reader.EndOfStream)
-                {
-                    string line = reader.ReadLine();
-                    string[] values = line.Split(',');
-                    float timeInstant = float.Parse(values[0], CultureInfo.InvariantCulture);
-                    Dictionary<JointType, Joint> joints = new Dictionary<JointType, Joint>();
-                    float x = float.NaN;
-                    float y = float.NaN;
-                    for(uint i = 1; i < values.Length; i++)
-                    {
-                        string[] hp = headers[i].Split('_');
-                        Tuple<string, string> header = new Tuple<string, string>(hp[0], hp[1]);
-                        // if header.Item1 is not in JointTypes then throw FileFormatException
-                        if (header.Item2 == "x")
-                        {
-                            x = float.Parse(values[i], CultureInfo.InvariantCulture);
-                        }
-                        else if (header.Item2 == "y")
-                        {
-                            y = float.Parse(values[i], CultureInfo.InvariantCulture);
-                        }
-                        else if (header.Item2 == "z")
-                        {
-                            if(x == float.NaN || y == float.NaN) throw new FileFormatException("Columns should be provided in x, y, z order.");
-                            JointType jt = (JointType)Enum.Parse(typeof(JointType), header.Item1);
-                            joints.Add(jt, InitJointFromCsvPoint(jt, x, y, float.Parse(values[i], CultureInfo.InvariantCulture)));
-                            x = float.NaN;
-                            y = float.NaN;
-                        }
-                        else 
-                        {
-                            throw new FileFormatException("Header " + headers[i] + " should end with x, y or z after '_'");
-                        }
-                    }
-                    jointsInTime.Add(timeInstant, joints);
-                }
-            }
-            return jointsInTime;
+            //todo
+            return false;
         }
     }
 }
