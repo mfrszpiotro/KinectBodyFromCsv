@@ -9,6 +9,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Globalization;
 using CsvHelper;
+using System.Reflection;
 
 namespace Microsoft.Samples.Kinect.BodyBasics
 {
@@ -41,37 +42,90 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         public float HandTipRight_x { get; set; }   public float HandTipRight_y { get; set; }   public float HandTipRight_z { get; set; }
         public float ThumbRight_x { get; set; }     public float ThumbRight_y { get; set; }    public float ThumbRight_z { get; set; }
 
-        public List<CsvBody> ReadFromFile(string fileName)
+        public CsvBody()
         {
-            using (var reader = new StreamReader("saved\\"+fileName))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            List<PropertyInfo> properties = typeof(CsvBody).GetProperties().ToList();
+            foreach (PropertyInfo property in properties)
             {
-                var records = csv.GetRecords<CsvBody>();
-            }
-            return records;
-        }
-
-        public void InitFile(string fileName)
-        {
-            using (var writer = new StreamWriter("saved\\"+fileName))
-            using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
-            {
-                List<CsvBody> emptyList = new List<CsvBody>()
-                csv.WriteRecords(emptyList);
+                property.SetValue(this, 0);
             }
         }
 
-        public void AppendToFile(string fileName, List<CsvBody> records)
+        public CsvBody(double secondInstant, IReadOnlyDictionary<JointType, Joint> joints)
         {
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            foreach (KeyValuePair<JointType, Joint> pair in joints)
+            {
+                switch (pair.Key)
+                {
+                    case JointType.Head:
+                        this.Head_x = pair.Value.Position.X;            this.Head_y = pair.Value.Position.Y;            this.Head_z = pair.Value.Position.Z; break;
+                    case JointType.Neck:
+                        this.Neck_x = pair.Value.Position.X;            this.Neck_y = pair.Value.Position.Y;            this.Neck_z = pair.Value.Position.Z; break;
+                    case JointType.SpineShoulder:
+                        this.SpineShoulder_x = pair.Value.Position.X;   this.SpineShoulder_y = pair.Value.Position.Y;   this.SpineShoulder_z = pair.Value.Position.Z; break;
+                    case JointType.ShoulderLeft:
+                        this.ShoulderLeft_x = pair.Value.Position.X;    this.ShoulderLeft_y = pair.Value.Position.Y;    this.ShoulderLeft_z = pair.Value.Position.Z; break;
+                    case JointType.ElbowLeft:
+                        this.ElbowLeft_x = pair.Value.Position.X;       this.ElbowLeft_y = pair.Value.Position.Y;       this.ElbowLeft_z = pair.Value.Position.Z; break;
+                    case JointType.WristLeft:
+                        this.WristLeft_x = pair.Value.Position.X;       this.WristLeft_y = pair.Value.Position.Y;       this.WristLeft_z = pair.Value.Position.Z; break;
+                    case JointType.HandLeft:
+                        this.HandLeft_x = pair.Value.Position.X;        this.HandLeft_y = pair.Value.Position.Y;        this.HandLeft_z = pair.Value.Position.Z; break;
+                    case JointType.HandTipLeft:
+                        this.HandTipLeft_x = pair.Value.Position.X;     this.HandTipLeft_y = pair.Value.Position.Y;     this.HandTipLeft_z = pair.Value.Position.Z; break;
+                    case JointType.ThumbLeft:
+                        this.ThumbLeft_x = pair.Value.Position.X;       this.ThumbLeft_y = pair.Value.Position.Y;       this.ThumbLeft_z = pair.Value.Position.Z; break;
+                    case JointType.ShoulderRight:
+                        this.ShoulderRight_x = pair.Value.Position.X;   this.ShoulderRight_y = pair.Value.Position.Y;   this.ShoulderRight_z = pair.Value.Position.Z; break;
+                    case JointType.ElbowRight:
+                        this.ElbowRight_x = pair.Value.Position.X;      this.ElbowRight_y = pair.Value.Position.Y;      this.ElbowRight_z = pair.Value.Position.Z; break;
+                    case JointType.WristRight:
+                        this.WristRight_x = pair.Value.Position.X;      this.WristRight_y = pair.Value.Position.Y;      this.WristRight_z = pair.Value.Position.Z; break;
+                    case JointType.HandRight:
+                        this.HandRight_x = pair.Value.Position.X;       this.HandRight_y = pair.Value.Position.Y;       this.HandRight_z = pair.Value.Position.Z; break;
+                    case JointType.HandTipRight:
+                        this.HandTipRight_x = pair.Value.Position.X;    this.HandTipRight_y = pair.Value.Position.Y;    this.HandTipRight_z = pair.Value.Position.Z; break;
+                    case JointType.ThumbRight:
+                        this.ThumbRight_x = pair.Value.Position.X; this.ThumbRight_y = pair.Value.Position.Y; this.ThumbRight_z = pair.Value.Position.Z; break;
+                    case JointType.SpineMid:
+                        this.SpineMid_x = pair.Value.Position.X;        this.SpineMid_y = pair.Value.Position.Y;        this.SpineMid_z = pair.Value.Position.Z; break;
+                    case JointType.SpineBase:
+                        this.SpineBase_x = pair.Value.Position.X;       this.SpineBase_y = pair.Value.Position.Y;       this.SpineBase_z = pair.Value.Position.Z; break;
+                    case JointType.HipLeft:
+                        this.HipLeft_x = pair.Value.Position.X;         this.HipLeft_y = pair.Value.Position.Y;         this.HipLeft_z = pair.Value.Position.Z; break;
+                    case JointType.KneeLeft:
+                        this.KneeLeft_x = pair.Value.Position.X;        this.KneeLeft_y = pair.Value.Position.Y;        this.KneeLeft_z = pair.Value.Position.Z; break;
+                    case JointType.AnkleLeft:
+                        this.AnkleLeft_x = pair.Value.Position.X;       this.AnkleLeft_y = pair.Value.Position.Y;       this.AnkleLeft_z = pair.Value.Position.Z; break;
+                    case JointType.FootLeft:
+                        this.FootLeft_x = pair.Value.Position.X;        this.FootLeft_y = pair.Value.Position.Y;        this.FootLeft_z = pair.Value.Position.Z; break;
+                    case JointType.HipRight:
+                        this.HipRight_x = pair.Value.Position.X;        this.HipRight_y = pair.Value.Position.Y;        this.HipRight_z = pair.Value.Position.Z; break;
+                    case JointType.KneeRight:
+                        this.KneeRight_x = pair.Value.Position.X;       this.KneeRight_y = pair.Value.Position.Y;       this.KneeRight_z = pair.Value.Position.Z; break;
+                    case JointType.AnkleRight:
+                        this.AnkleRight_x = pair.Value.Position.X;      this.AnkleRight_y = pair.Value.Position.Y;      this.AnkleRight_z = pair.Value.Position.Z; break;
+                    case JointType.FootRight:
+                        this.FootRight_x = pair.Value.Position.X;       this.FootRight_y = pair.Value.Position.Y;       this.FootRight_z = pair.Value.Position.Z; break;
+                    default:
+                        throw new ArgumentException("Unexpected joint value");
+                }
+            }
+            this.Time = (float)secondInstant;
+        }
+
+        public void AppendToFile(string fileName)
+        {
+            var config = new CsvHelper.Configuration.CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 HasHeaderRecord = false,
             };
-            using (var stream = File.Open("saved\\"+fileName, FileMode.Append))
+            using (var stream = File.Open("saved\\"+fileName+".csv", FileMode.Append))
             using (var writer = new StreamWriter(stream))
             using (var csv = new CsvWriter(writer, config))
             {
-                csv.WriteRecords(records);
+                csv.WriteRecord(this);
+                csv.NextRecord();
             }
         }
     }

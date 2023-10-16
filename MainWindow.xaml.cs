@@ -19,6 +19,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
     using Microsoft.Kinect;
     using System.Threading;
     using System.Linq;
+    using System.Threading.Tasks;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -130,9 +131,13 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// </summary>
         private string statusText = null;
 
-        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBody.ReadFromFile("ollie.csv");
+        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBodyHelpers.ReadFromFile("test");
 
         private int csvCounter = 0;
+
+        private bool isRecording = false;
+
+        private DateTime lastRecordingStartTime = DateTime.Now;
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -344,6 +349,12 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             this.DrawClippedEdges(body, dc);
 
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
+
+                            if (isRecording)
+                            {
+                                var csvBody = new CsvBody((DateTime.Now - lastRecordingStartTime).TotalSeconds, joints);
+                                csvBody.AppendToFile(lastRecordingStartTime.ToString("yyyyMMddHHmmssfff"));
+                            }
 
                             // convert the joint points to depth (display) space
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
@@ -557,6 +568,15 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                 this.DrawBody(joints, jointPoints, dc, drawPen);
             }
+        }
+
+        private async void Record_Click(object sender, RoutedEventArgs e)
+        {
+            lastRecordingStartTime = DateTime.Now;
+            CsvBodyHelpers.InitFile(lastRecordingStartTime.ToString("yyyyMMddHHmmssfff"));
+            isRecording = true;
+            await Task.Delay(2000);
+            isRecording = false;
         }
     }
 }
