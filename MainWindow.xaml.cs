@@ -20,6 +20,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
     using System.Threading;
     using System.Linq;
     using System.Threading.Tasks;
+    using CsvHelper;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -131,13 +132,20 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// </summary>
         private string statusText = null;
 
-        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBodyHelpers.ReadFromFile("test");
+        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBodyHelpers.ReadFromFile("ollie");
 
         private int csvCounter = 0;
 
         private bool isRecording = false;
 
+        private bool isAboutToStopRecording = false;
+
         private DateTime lastRecordingStartTime = DateTime.Now;
+
+        private uint framesLeftAfterJump = 45;
+
+        private double prevFootDistanceFromFloor = -1;
+
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -314,6 +322,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         private void Reader_FrameArrived(object sender, BodyFrameArrivedEventArgs e)
         {
             bool dataReceived = false;
+            Floor floor = null;
 
             using (BodyFrame bodyFrame = e.FrameReference.AcquireFrame())
             {
@@ -328,6 +337,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                     // As long as those body objects are not disposed and not set to null in the array,
                     // those body objects will be re-used.
                     bodyFrame.GetAndRefreshBodyData(this.bodies);
+                    floor = new Floor(bodyFrame.FloorClipPlane);
                     dataReceived = true;
                 }
             }
@@ -350,14 +360,59 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
 
+                            string tempFilename = "temp_" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff");
                             if (isRecording)
                             {
                                 var csvBody = new CsvBody((DateTime.Now - lastRecordingStartTime).TotalSeconds, joints);
-                                csvBody.AppendToFile(lastRecordingStartTime.ToString("yyyyMMddHHmmssfff"));
+                                csvBody.AppendToFile(tempFilename);
                             }
 
                             // convert the joint points to depth (display) space
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
+
+                            // stoping recording 16 frames after jump was made
+                            double currentFootDistanceFromFloor = floor.DistanceFrom(joints[JointType.HipRight].Position);
+                            if (isRecording && !isAboutToStopRecording)
+                            {
+                                if (currentFootDistanceFromFloor > prevFootDistanceFromFloor + 0.08 && prevFootDistanceFromFloor != -1)
+                                {
+                                    isAboutToStopRecording = true;
+                                }
+                            }
+                            else if (isRecording && isAboutToStopRecording)
+                            {
+                                if (framesLeftAfterJump > 0)
+                                {
+                                    framesLeftAfterJump--;
+                                }
+                                else
+                                {
+                                    // Rename saved file so it is no longer temporary and prevent it from being deleted by awaiting recording task.
+                                    if (File.Exists("saved\\" + tempFilename + ".csv"))
+                                    {
+                                        File.Move("saved\\" + tempFilename + ".csv", "saved\\" + tempFilename.Substring(5) + ".csv");
+
+                                        List<CsvBody> records = null;
+                                        using (var reader = new StreamReader("saved\\" + tempFilename.Substring(5) + ".csv"))
+                                        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+                                        {
+                                            records = csv.GetRecords<CsvBody>().ToList();
+                                            int toDelete = (records.Count - 45 - 5);
+                                            records.RemoveAll(t => records.IndexOf(t) < toDelete);
+                                        }
+                                        using (var writer = new StreamWriter("saved\\trimmed - " + tempFilename.Substring(5) + ".csv"))
+                                        using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                                        {
+                                            csvWriter.WriteRecords(records);
+                                        }
+                                    }
+                                    isRecording = false;
+                                    isAboutToStopRecording = false;
+                                    framesLeftAfterJump = 45;
+                                }
+                            }
+                            prevFootDistanceFromFloor = currentFootDistanceFromFloor;
+
 
                             foreach (JointType jointType in joints.Keys)
                             {
@@ -540,6 +595,9 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                 this.bodyFrameReader.Dispose();
             }
 
+            
+            
+            
             KeyValuePair<float, IReadOnlyDictionary<JointType, Joint>> pair = csvJointsInTime.ElementAt(csvCounter++);
 
             using (DrawingContext dc = this.drawingGroup.Open())
@@ -547,7 +605,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                 // Draw a transparent background to set the render size
                 dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
                 Pen drawPen = this.bodyColors[0];
-                IReadOnlyDictionary<JointType, Joint> joints = pair.Value; 
+                IReadOnlyDictionary<JointType, Joint> joints = pair.Value;
 
                 // convert the joint points to depth (display) space
                 Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
@@ -573,10 +631,15 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         private async void Record_Click(object sender, RoutedEventArgs e)
         {
             lastRecordingStartTime = DateTime.Now;
-            CsvBodyHelpers.InitFile(lastRecordingStartTime.ToString("yyyyMMddHHmmssfff"));
+            string tempFilename = "temp_" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff");
+            CsvBodyHelpers.InitFile(tempFilename);
             isRecording = true;
-            await Task.Delay(2000);
+            await Task.Delay(10000);
             isRecording = false;
+            if (File.Exists("saved\\" + tempFilename + ".csv"))
+            {
+                File.Delete("saved\\" + tempFilename + ".csv");
+            }
         }
     }
 }
