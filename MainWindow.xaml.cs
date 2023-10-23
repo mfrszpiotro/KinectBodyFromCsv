@@ -21,6 +21,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
     using System.Linq;
     using System.Threading.Tasks;
     using CsvHelper;
+    using Microsoft.Win32;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -132,10 +133,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         /// </summary>
         private string statusText = null;
 
-        private IReadOnlyDictionary<float, IReadOnlyDictionary<JointType, Joint>> csvJointsInTime = CsvBodyHelpers.ReadFromFile("ollie");
-
-        private int csvCounter = 0;
-
         private bool isRecording = false;
 
         private bool isAboutToStopRecording = false;
@@ -169,51 +166,53 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             this.bodyFrameReader = this.kinectSensor.BodyFrameSource.OpenReader();
 
             // a bone defined as a line between two joints
-            this.bones = new List<Tuple<JointType, JointType>>();
+            this.bones = new List<Tuple<JointType, JointType>>
+            {
+                // Torso
+                new Tuple<JointType, JointType>(JointType.Head, JointType.Neck),
+                new Tuple<JointType, JointType>(JointType.Neck, JointType.SpineShoulder),
+                new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.SpineMid),
+                new Tuple<JointType, JointType>(JointType.SpineMid, JointType.SpineBase),
+                new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.ShoulderRight),
+                new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.ShoulderLeft),
+                new Tuple<JointType, JointType>(JointType.SpineBase, JointType.HipRight),
+                new Tuple<JointType, JointType>(JointType.SpineBase, JointType.HipLeft),
 
-            // Torso
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.Head, JointType.Neck));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.Neck, JointType.SpineShoulder));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.SpineMid));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineMid, JointType.SpineBase));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.ShoulderRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineShoulder, JointType.ShoulderLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineBase, JointType.HipRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.SpineBase, JointType.HipLeft));
+                // Right Arm
+                new Tuple<JointType, JointType>(JointType.ShoulderRight, JointType.ElbowRight),
+                new Tuple<JointType, JointType>(JointType.ElbowRight, JointType.WristRight),
+                new Tuple<JointType, JointType>(JointType.WristRight, JointType.HandRight),
+                new Tuple<JointType, JointType>(JointType.HandRight, JointType.HandTipRight),
+                new Tuple<JointType, JointType>(JointType.WristRight, JointType.ThumbRight),
 
-            // Right Arm
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.ShoulderRight, JointType.ElbowRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.ElbowRight, JointType.WristRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.WristRight, JointType.HandRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.HandRight, JointType.HandTipRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.WristRight, JointType.ThumbRight));
+                // Left Arm
+                new Tuple<JointType, JointType>(JointType.ShoulderLeft, JointType.ElbowLeft),
+                new Tuple<JointType, JointType>(JointType.ElbowLeft, JointType.WristLeft),
+                new Tuple<JointType, JointType>(JointType.WristLeft, JointType.HandLeft),
+                new Tuple<JointType, JointType>(JointType.HandLeft, JointType.HandTipLeft),
+                new Tuple<JointType, JointType>(JointType.WristLeft, JointType.ThumbLeft),
 
-            // Left Arm
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.ShoulderLeft, JointType.ElbowLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.ElbowLeft, JointType.WristLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.WristLeft, JointType.HandLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.HandLeft, JointType.HandTipLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.WristLeft, JointType.ThumbLeft));
+                // Right Leg
+                new Tuple<JointType, JointType>(JointType.HipRight, JointType.KneeRight),
+                new Tuple<JointType, JointType>(JointType.KneeRight, JointType.AnkleRight),
+                new Tuple<JointType, JointType>(JointType.AnkleRight, JointType.FootRight),
 
-            // Right Leg
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.HipRight, JointType.KneeRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.KneeRight, JointType.AnkleRight));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.AnkleRight, JointType.FootRight));
-
-            // Left Leg
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.HipLeft, JointType.KneeLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.KneeLeft, JointType.AnkleLeft));
-            this.bones.Add(new Tuple<JointType, JointType>(JointType.AnkleLeft, JointType.FootLeft));
+                // Left Leg
+                new Tuple<JointType, JointType>(JointType.HipLeft, JointType.KneeLeft),
+                new Tuple<JointType, JointType>(JointType.KneeLeft, JointType.AnkleLeft),
+                new Tuple<JointType, JointType>(JointType.AnkleLeft, JointType.FootLeft)
+            };
 
             // populate body colors, one for each BodyIndex
-            this.bodyColors = new List<Pen>();
-
-            this.bodyColors.Add(new Pen(Brushes.Red, 6));
-            this.bodyColors.Add(new Pen(Brushes.Orange, 6));
-            this.bodyColors.Add(new Pen(Brushes.Green, 6));
-            this.bodyColors.Add(new Pen(Brushes.Blue, 6));
-            this.bodyColors.Add(new Pen(Brushes.Indigo, 6));
-            this.bodyColors.Add(new Pen(Brushes.Violet, 6));
+            this.bodyColors = new List<Pen>
+            {
+                new Pen(Brushes.Red, 6),
+                new Pen(Brushes.Orange, 6),
+                new Pen(Brushes.Green, 6),
+                new Pen(Brushes.Blue, 6),
+                new Pen(Brushes.Indigo, 6),
+                new Pen(Brushes.Violet, 6)
+            };
 
             // set IsAvailableChanged event notifier
             this.kinectSensor.IsAvailableChanged += this.Sensor_IsAvailableChanged;
@@ -588,43 +587,17 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                                             : Properties.Resources.SensorNotAvailableStatusText;
         }
 
-        private void Play_Click(object sender, RoutedEventArgs e)
+        private void Viewer_Click(object sender, RoutedEventArgs e)
         {
-            if (this.bodyFrameReader != null)
+            var openFileDialog = new OpenFileDialog
             {
-                this.bodyFrameReader.Dispose();
-            }
-
-            
-            
-            
-            KeyValuePair<float, IReadOnlyDictionary<JointType, Joint>> pair = csvJointsInTime.ElementAt(csvCounter++);
-
-            using (DrawingContext dc = this.drawingGroup.Open())
+                Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
+                InitialDirectory = System.IO.Directory.GetCurrentDirectory() + @"\saved\"
+        };
+            if (openFileDialog.ShowDialog() == true)
             {
-                // Draw a transparent background to set the render size
-                dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, this.displayWidth, this.displayHeight));
-                Pen drawPen = this.bodyColors[0];
-                IReadOnlyDictionary<JointType, Joint> joints = pair.Value;
-
-                // convert the joint points to depth (display) space
-                Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
-
-                foreach (JointType jointType in joints.Keys)
-                {
-                    // sometimes the depth(Z) of an inferred joint may show as negative
-                    // clamp down to 0.1f to prevent coordinatemapper from returning (-Infinity, -Infinity)
-                    CameraSpacePoint position = joints[jointType].Position;
-                    if (position.Z < 0)
-                    {
-                        position.Z = InferredZPositionClamp;
-                    }
-
-                    DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
-                    jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                }
-
-                this.DrawBody(joints, jointPoints, dc, drawPen);
+                CsvViewer viewer = new CsvViewer(this.kinectSensor, this.bodyFrameReader, openFileDialog.FileName);
+                viewer.Show();
             }
         }
 

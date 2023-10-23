@@ -13,7 +13,8 @@ namespace Microsoft.Samples.Kinect.BodyBasics
     {
         public static void InitFile(string fileName)
         {
-            using (var writer = new StreamWriter("saved\\" + fileName + ".csv"))
+            Directory.CreateDirectory(@"saved\");
+            using (var writer = new StreamWriter(@"saved\" + fileName + ".csv"))
             using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
             {
                 IEnumerable<CsvBody> emptyList = new List<CsvBody>();
@@ -21,10 +22,10 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             }
         }
 
-        public static Dictionary<float, IReadOnlyDictionary<JointType, Joint>> ReadFromFile(string fileName)
+        public static Dictionary<float, IReadOnlyDictionary<JointType, Joint>> ReadFromFile(string filePath)
         {
             List<CsvBody> records = null;
-            using (var reader = new StreamReader("saved\\" + fileName + ".csv"))
+            using (var reader = new StreamReader(filePath))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
                 records = csv.GetRecords<CsvBody>().ToList();
@@ -64,10 +65,10 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             }
             return jointsInTime;
         }
-        public static Dictionary<float, IReadOnlyDictionary<JointType, Joint>> ReadFromFile(string fileName, bool withHelper=true)
+        public static Dictionary<float, IReadOnlyDictionary<JointType, Joint>> ReadFromFile(string filePath, bool withHelper=true)
         {
             Dictionary<float, IReadOnlyDictionary<JointType, Joint>> jointsInTime = new Dictionary<float, IReadOnlyDictionary<JointType, Joint>>();
-            using (var reader = new StreamReader(fileName + ".csv"))
+            using (var reader = new StreamReader(filePath))
             {
                 string headline = reader.ReadLine();
                 string[] headers = headline.Split(',');
