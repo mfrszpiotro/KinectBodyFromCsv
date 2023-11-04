@@ -39,7 +39,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                 float timeInstant = (float)properties.First().GetValue(record);
                 float x = float.NaN;
                 float y = float.NaN;
-                foreach (PropertyInfo property in properties.Skip(1))
+                foreach (PropertyInfo property in properties.Skip(1).Take(properties.Count - 5)) // omit both time instant and floor values
                 {
                     string[] hp = property.Name.Split('_');
                     Tuple<string, string> header = new Tuple<string, string>(hp[0], hp[1]);
@@ -80,7 +80,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                     Dictionary<JointType, Joint> joints = new Dictionary<JointType, Joint>();
                     float x = float.NaN;
                     float y = float.NaN;
-                    for (uint i = 1; i < values.Length; i++)
+                    for (uint i = 1; i < values.Length-5; i++) // omit both time instant and floor values
                     {
                         float value = float.Parse(values[i], CultureInfo.InvariantCulture);
                         string[] hp = headers[i].Split('_');
@@ -115,13 +115,17 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
         private static Joint InitJointFromCsvPoint(JointType type, float x, float y, float z)
         {
-            Joint j = new Joint();
-            j.TrackingState = TrackingState.Tracked;
-            j.JointType = type;
-            j.Position = new CameraSpacePoint();
-            j.Position.X = x;
-            j.Position.Y = y;
-            j.Position.Z = z;
+            Joint j = new Joint
+            {
+                TrackingState = TrackingState.Tracked,
+                JointType = type,
+                Position = new CameraSpacePoint
+                {
+                    X = x,
+                    Y = y,
+                    Z = z
+                }
+            };
             return j;
         }
     }

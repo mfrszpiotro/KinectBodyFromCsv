@@ -40,7 +40,8 @@ namespace Microsoft.Samples.Kinect.BodyBasics
         public float HandTipLeft_x { get; set; }    public float HandTipLeft_y { get; set; }    public float HandTipLeft_z { get; set; }
         public float ThumbLeft_x { get; set; }      public float ThumbLeft_y { get; set; }      public float ThumbLeft_z { get; set; }
         public float HandTipRight_x { get; set; }   public float HandTipRight_y { get; set; }   public float HandTipRight_z { get; set; }
-        public float ThumbRight_x { get; set; }     public float ThumbRight_y { get; set; }    public float ThumbRight_z { get; set; }
+        public float ThumbRight_x { get; set; }     public float ThumbRight_y { get; set; }     public float ThumbRight_z { get; set; }
+        public float Floor_x { get; set; }          public float Floor_y { get; set; }          public float Floor_z { get; set; }          public float Floor_w { get; set; }
 
         public CsvBody()
         {
@@ -51,7 +52,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             }
         }
 
-        public CsvBody(double secondInstant, IReadOnlyDictionary<JointType, Joint> joints)
+        public CsvBody(double secondInstant, IReadOnlyDictionary<JointType, Joint> joints, Floor floor)
         {
             foreach (KeyValuePair<JointType, Joint> pair in joints)
             {
@@ -86,7 +87,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                     case JointType.HandTipRight:
                         this.HandTipRight_x = pair.Value.Position.X;    this.HandTipRight_y = pair.Value.Position.Y;    this.HandTipRight_z = pair.Value.Position.Z; break;
                     case JointType.ThumbRight:
-                        this.ThumbRight_x = pair.Value.Position.X; this.ThumbRight_y = pair.Value.Position.Y; this.ThumbRight_z = pair.Value.Position.Z; break;
+                        this.ThumbRight_x = pair.Value.Position.X;      this.ThumbRight_y = pair.Value.Position.Y;      this.ThumbRight_z = pair.Value.Position.Z; break;
                     case JointType.SpineMid:
                         this.SpineMid_x = pair.Value.Position.X;        this.SpineMid_y = pair.Value.Position.Y;        this.SpineMid_z = pair.Value.Position.Z; break;
                     case JointType.SpineBase:
@@ -112,6 +113,10 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                 }
             }
             this.Time = (float)secondInstant;
+            if (floor != null)
+            {
+                this.Floor_x = floor.X; this.Floor_y = floor.Y; this.Floor_z = floor.Z; this.Floor_w = floor.W;
+            }
         }
 
         public void AppendToFile(string fileName)

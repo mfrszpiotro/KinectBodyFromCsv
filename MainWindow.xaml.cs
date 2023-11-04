@@ -139,10 +139,11 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
         private DateTime lastRecordingStartTime = DateTime.Now;
 
-        private uint framesLeftAfterJump = 45;
+        private int framesLeftAfterJump = 45;
 
-        private double prevFootDistanceFromFloor = -1;
+        private double prevDistanceFromFloor = -1;
 
+        private List<CsvBody> recordedFrames = new List<CsvBody>();
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -362,18 +363,18 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             string tempFilename = "temp_" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff");
                             if (isRecording)
                             {
-                                var csvBody = new CsvBody((DateTime.Now - lastRecordingStartTime).TotalSeconds, joints);
-                                csvBody.AppendToFile(tempFilename);
+                                var csvBody = new CsvBody((DateTime.Now - lastRecordingStartTime).TotalSeconds, joints, floor);
+                                recordedFrames.Add(csvBody);
                             }
 
                             // convert the joint points to depth (display) space
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
 
-                            // stoping recording 16 frames after jump was made
+                            // stoping recording some frames after jump was made
                             double currentFootDistanceFromFloor = floor.DistanceFrom(joints[JointType.HipRight].Position);
                             if (isRecording && !isAboutToStopRecording)
                             {
-                                if (currentFootDistanceFromFloor > prevFootDistanceFromFloor + 0.08 && prevFootDistanceFromFloor != -1)
+                                if (currentFootDistanceFromFloor > prevDistanceFromFloor + 0.08 && prevDistanceFromFloor != -1)
                                 {
                                     isAboutToStopRecording = true;
                                 }
@@ -386,31 +387,26 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                                 }
                                 else
                                 {
-                                    // Rename saved file so it is no longer temporary and prevent it from being deleted by awaiting recording task.
-                                    if (File.Exists("saved\\" + tempFilename + ".csv"))
-                                    {
-                                        File.Move("saved\\" + tempFilename + ".csv", "saved\\" + tempFilename.Substring(5) + ".csv");
-
-                                        List<CsvBody> records = null;
-                                        using (var reader = new StreamReader("saved\\" + tempFilename.Substring(5) + ".csv"))
-                                        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
-                                        {
-                                            records = csv.GetRecords<CsvBody>().ToList();
-                                            int toDelete = (records.Count - 45 - 5);
-                                            records.RemoveAll(t => records.IndexOf(t) < toDelete);
-                                        }
-                                        using (var writer = new StreamWriter("saved\\trimmed - " + tempFilename.Substring(5) + ".csv"))
-                                        using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
-                                        {
-                                            csvWriter.WriteRecords(records);
-                                        }
-                                    }
                                     isRecording = false;
                                     isAboutToStopRecording = false;
                                     framesLeftAfterJump = 45;
+                                    
+                                    using (var writer = new StreamWriter("saved\\" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff") + ".csv"))
+                                    using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                                    {
+                                        csvWriter.WriteRecords(recordedFrames);
+                                    }
+                                    int toDelete = (recordedFrames.Count - framesLeftAfterJump - 5);
+                                    recordedFrames.RemoveAll(t => recordedFrames.IndexOf(t) < toDelete);
+                                    using (var writer = new StreamWriter("saved\\trimmed - " + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff") + ".csv"))
+                                    using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                                    {
+                                        csvWriter.WriteRecords(recordedFrames);
+                                    }
+                                    recordedFrames = new List<CsvBody>();
                                 }
                             }
-                            prevFootDistanceFromFloor = currentFootDistanceFromFloor;
+                            prevDistanceFromFloor = currentFootDistanceFromFloor;
 
 
                             foreach (JointType jointType in joints.Keys)
@@ -592,27 +588,23 @@ namespace Microsoft.Samples.Kinect.BodyBasics
             var openFileDialog = new OpenFileDialog
             {
                 Filter = "CSV files (*.csv)|*.csv|All files (*.*)|*.*",
-                InitialDirectory = System.IO.Directory.GetCurrentDirectory() + @"\saved\"
+                InitialDirectory = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + @"\saved\",
+                RestoreDirectory = true
         };
             if (openFileDialog.ShowDialog() == true)
             {
                 CsvViewer viewer = new CsvViewer(this.kinectSensor, this.bodyFrameReader, openFileDialog.FileName);
-                viewer.Show();
+                viewer.ShowDialog();
             }
         }
 
         private async void Record_Click(object sender, RoutedEventArgs e)
         {
+            //todo: recorder as singleton to prevent from creating colliding recordings
             lastRecordingStartTime = DateTime.Now;
-            string tempFilename = "temp_" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff");
-            CsvBodyHelpers.InitFile(tempFilename);
             isRecording = true;
             await Task.Delay(10000);
             isRecording = false;
-            if (File.Exists("saved\\" + tempFilename + ".csv"))
-            {
-                File.Delete("saved\\" + tempFilename + ".csv");
-            }
         }
     }
 }
