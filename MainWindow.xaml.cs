@@ -360,7 +360,6 @@ namespace Microsoft.Samples.Kinect.BodyBasics
 
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
 
-                            string tempFilename = "temp_" + lastRecordingStartTime.ToString("yyyyMMddHHmmssfff");
                             if (isRecording)
                             {
                                 var csvBody = new CsvBody((DateTime.Now - lastRecordingStartTime).TotalSeconds, joints, floor);
@@ -374,7 +373,7 @@ namespace Microsoft.Samples.Kinect.BodyBasics
                             double currentFootDistanceFromFloor = floor.DistanceFrom(joints[JointType.HipRight].Position);
                             if (isRecording && !isAboutToStopRecording)
                             {
-                                if (currentFootDistanceFromFloor > prevDistanceFromFloor + 0.08 && prevDistanceFromFloor != -1)
+                                if (currentFootDistanceFromFloor > prevDistanceFromFloor + 0.12 && prevDistanceFromFloor != -1)
                                 {
                                     isAboutToStopRecording = true;
                                 }
